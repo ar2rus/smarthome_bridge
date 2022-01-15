@@ -1,5 +1,8 @@
 package com.gargon.smarthome;
 
+import com.gargon.smarthome.enums.Address;
+import com.gargon.smarthome.enums.Command;
+import com.gargon.smarthome.enums.Priority;
 import com.gargon.smarthome.supradin.SupradinConnection;
 import com.gargon.smarthome.supradin.SupradinConnectionResponseFilter;
 import com.gargon.smarthome.supradin.SupradinDataListener;
@@ -87,8 +90,8 @@ public class SmarthomeController {
                 public void dataRecieved(SupradinConnection connection, SupradinDataMessage sm) {
                     //ip может быть только у супрадин, все остальные
                     //приходят назад, зацикливаясь из мультикаст сети
-                    if (sm.getSrc() <= 0x80) {  //supradin addresses
-                        multicastConnection.sendData(new MulticastDataMessage(sm.getDst(), sm.getSrc(), sm.getCommand(), sm.getData()));
+                    if (sm.getSrc().getValue() <= 0x80) {  //supradin addresses
+                        multicastConnection.sendData(new MulticastDataMessage(sm.getDst().getValue(), sm.getSrc().getValue(), sm.getCommand().getValue(), sm.getData()));
                         //System.out.println("supradin recieved: " + sm.toString());
                     }
                     
@@ -110,7 +113,7 @@ public class SmarthomeController {
                     }
 
                     //отправляет в супрадин сообщение с IP адресом отправителя из мультикаст-сети
-                    supradinConnection.sendData(new SupradinDataMessage(ip4, mm.getDst(), mm.getSrc(), mm.getCommand(), mm.getData()));
+                    supradinConnection.sendData(new SupradinDataMessage(ip4, Address.getByValue(mm.getDst()), Priority.getByValue(mm.getSrc()), Command.getByValue(mm.getCommand()), mm.getData()));
                     //System.out.println("multicast recieved: " + mm.toString());
 
                     //помогаем supradin разрулить подряд идущие сообщения
@@ -140,7 +143,7 @@ public class SmarthomeController {
                         if (data == null) {
                             data = new byte[]{};
                         }
-                        return supradinConnection.sendData(new SupradinDataMessage(dst, prio, command, data));
+                        return supradinConnection.sendData(new SupradinDataMessage(Address.getByValue(dst), Priority.getByValue(prio), Command.getByValue(command), data));
                     }
                 }));
                 httpServer.createContext(AskHTTPHandler.URI, new AskHTTPHandler(new AskHTTPCallback() {
@@ -150,11 +153,11 @@ public class SmarthomeController {
                         if (data == null) {
                             data = new byte[]{};
                         }
-                        SupradinDataMessage m = supradinConnection.sendDataAndWaitResponse(new SupradinDataMessage(dst, prio, command, data),
+                        SupradinDataMessage m = supradinConnection.sendDataAndWaitResponse(new SupradinDataMessage(Address.getByValue(dst), Priority.getByValue(prio),Command.getByValue(command), data),
                                 new SupradinConnectionResponseFilter() {
                             @Override
                             public boolean filter(SupradinDataMessage supradinRecieved) {
-                                return supradinRecieved.getSrc() == rsrc && supradinRecieved.getCommand() == rcmd;
+                                return supradinRecieved.getSrc().getValue() == rsrc && supradinRecieved.getCommand().getValue() == rcmd;
                             }
                         }, rtimeout);
                         if (m != null) {

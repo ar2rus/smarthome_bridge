@@ -1,6 +1,7 @@
 package com.gargon.smarthome.multicast.messages;
 
-import com.gargon.smarthome.utils.DataFormat;
+import com.gargon.smarthome.utils.HexDataUtils;
+
 import java.util.Arrays;
 
 /**
@@ -134,6 +135,6 @@ public class MulticastDataMessage {
     
     @Override
     public String toString() {
-        return "src=" + src + ", dst=" + dst + ", command=" + command + ", data=" + DataFormat.bytesToHex(data);
+        return "src=" + src + ", dst=" + dst + ", command=" + command + ", data=" + HexDataUtils.bytesToHex(data);
     }
 }

@@ -1,14 +1,17 @@
 package com.gargon.smarthome.trigger;
 
-import com.gargon.smarthome.Smarthome;
+import com.gargon.smarthome.enums.Address;
+import com.gargon.smarthome.enums.Command;
+import com.gargon.smarthome.enums.Priority;
 import com.gargon.smarthome.supradin.SupradinConnection;
 import com.gargon.smarthome.supradin.messages.SupradinDataMessage;
-import com.gargon.smarthome.utils.DataFormat;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import com.gargon.smarthome.utils.HexDataUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -67,14 +70,14 @@ public class TriggerController {
                                 data = data.replaceAll("/" + i, match_groups.get(i));
                             }
 
-                            byte[] byte_array = DataFormat.hexToByteArray(data);
+                            byte[] byte_array = HexDataUtils.hexToByteArray(data);
 
                             if (byte_array == null) {
                                 byte_array = new byte[]{};
                             }
 
-                            connection.sendData(new SupradinDataMessage(m.getDst_id(), Smarthome.PRIORITY_COMMAND,
-                                    m.getCmd_id(), byte_array));
+                            connection.sendData(new SupradinDataMessage(Address.getByValue(m.getDst_id()), Priority.COMMAND,
+                                    Command.getByValue(m.getCmd_id()), byte_array));
                         } catch (Exception e) {
                             LOG.log(Level.WARNING, "Error while sending command \"{0}\": {1}",
                                     new Object[]{m, e.getMessage()});

@@ -8,49 +8,47 @@ import com.gargon.smarthome.utils.HexDataUtils;
 import java.util.Arrays;
 
 /**
- *
  * @author gargon
  */
 public class SupradinDataMessage {
 
-    private final static int MESSAGE_LENGTH  = 8;
-    
-    private final static int OFFSET_IP       = 0;
-    private final static int OFFSET_SRC_PRIO = 4;
-    private final static int OFFSET_DST      = 5;
-    private final static int OFFSET_COMMAND  = 6;
-    private final static int OFFSET_SIZE     = 7;
+    private final static int DATA_MESSAGE_LENGTH = 8;
 
-    
+    private final static int DATA_MESSAGE_OFFSET_IP = 0;
+    private final static int DATA_MESSAGE_OFFSET_SRC_PRIO = 4;
+    private final static int DATA_MESSAGE_OFFSET_DST = 5;
+    private final static int DATA_MESSAGE_OFFSET_COMMAND = 6;
+    private final static int DATA_MESSAGE_OFFSET_SIZE = 7;
+
     private int ip;
     private int src;    //union prio
-    private int dst;    
+    private int dst;
     private int command;
     private int size = -1;
-    
+
     private byte[] data;
 
     public SupradinDataMessage(byte[] buf) {
-        if (buf != null && buf.length >= MESSAGE_LENGTH) {
-            size = buf[OFFSET_SIZE] & 0xFF;
-            if (buf.length == size + MESSAGE_LENGTH) {
-                ip = (((buf[OFFSET_IP + 3] & 0xFF) << 24)
-                        | ((buf[OFFSET_IP + 2] & 0xFF) << 16)
-                        | ((buf[OFFSET_IP + 1] & 0xFF) << 8)
-                        | ((buf[OFFSET_IP + 0] & 0xFF) << 0));
-                
-                src = buf[OFFSET_SRC_PRIO] & 0xFF;
-                dst = buf[OFFSET_DST] & 0xFF;
-                command = buf[OFFSET_COMMAND] & 0xFF;
-                
-                data = Arrays.copyOfRange(buf, MESSAGE_LENGTH, buf.length);
+        if (buf != null && buf.length >= DATA_MESSAGE_LENGTH) {
+            size = buf[DATA_MESSAGE_OFFSET_SIZE] & 0xFF;
+            if (buf.length == size + DATA_MESSAGE_LENGTH) {
+                ip = (((buf[DATA_MESSAGE_OFFSET_IP + 3] & 0xFF) << 24)
+                        | ((buf[DATA_MESSAGE_OFFSET_IP + 2] & 0xFF) << 16)
+                        | ((buf[DATA_MESSAGE_OFFSET_IP + 1] & 0xFF) << 8)
+                        | ((buf[DATA_MESSAGE_OFFSET_IP + 0] & 0xFF) << 0));
+
+                src = buf[DATA_MESSAGE_OFFSET_SRC_PRIO] & 0xFF;
+                dst = buf[DATA_MESSAGE_OFFSET_DST] & 0xFF;
+                command = buf[DATA_MESSAGE_OFFSET_COMMAND] & 0xFF;
+
+                data = Arrays.copyOfRange(buf, DATA_MESSAGE_LENGTH, buf.length);
             } else {
                 size = -1;  //not valid packet
             }
         }
     }
 
-     public SupradinDataMessage(int ip, Address dst, Priority src_prio, Command command, byte[] data) {
+    public SupradinDataMessage(int ip, Address dst, Priority src_prio, Command command, byte[] data) {
         if (data != null) {
             this.ip = ip;
             this.src = src_prio.getValue();
@@ -61,13 +59,13 @@ public class SupradinDataMessage {
             this.data = data;
         }
     }
-    
+
     public SupradinDataMessage(Address dst, Priority src_prio, Command command, byte[] data) {
         this(0, dst, src_prio, command, data);
     }
-    
-     public SupradinDataMessage(Address dst, Priority src_prio, Command command) {
-         this(dst, src_prio, command, new byte[]{});
+
+    public SupradinDataMessage(Address dst, Priority src_prio, Command command) {
+        this(dst, src_prio, command, new byte[]{});
     }
 
     public boolean isValid() {
@@ -77,19 +75,19 @@ public class SupradinDataMessage {
     public byte[] toByteArray() {
         byte[] array = null;
         if (size >= 0) {
-            array = new byte[MESSAGE_LENGTH + size];
+            array = new byte[DATA_MESSAGE_LENGTH + size];
 
-            array[OFFSET_IP + 0] = (byte)((ip >> 0) & 0xFF);
-            array[OFFSET_IP + 1] = (byte)((ip >> 8) & 0xFF);
-            array[OFFSET_IP + 2] = (byte)((ip >> 16) & 0xFF);
-            array[OFFSET_IP + 3] = (byte)((ip >> 24) & 0xFF);
-            
-            array[OFFSET_SRC_PRIO] = (byte) src;
-            array[OFFSET_DST] = (byte) dst;
-            array[OFFSET_COMMAND] = (byte) command;
-            
-            array[OFFSET_SIZE] = (byte) size;
-            System.arraycopy(data, 0, array, MESSAGE_LENGTH, size);
+            array[DATA_MESSAGE_OFFSET_IP + 0] = (byte) ((ip >> 0) & 0xFF);
+            array[DATA_MESSAGE_OFFSET_IP + 1] = (byte) ((ip >> 8) & 0xFF);
+            array[DATA_MESSAGE_OFFSET_IP + 2] = (byte) ((ip >> 16) & 0xFF);
+            array[DATA_MESSAGE_OFFSET_IP + 3] = (byte) ((ip >> 24) & 0xFF);
+
+            array[DATA_MESSAGE_OFFSET_SRC_PRIO] = (byte) src;
+            array[DATA_MESSAGE_OFFSET_DST] = (byte) dst;
+            array[DATA_MESSAGE_OFFSET_COMMAND] = (byte) command;
+
+            array[DATA_MESSAGE_OFFSET_SIZE] = (byte) size;
+            System.arraycopy(data, 0, array, DATA_MESSAGE_LENGTH, size);
         }
         return array;
     }
@@ -114,12 +112,12 @@ public class SupradinDataMessage {
     public byte[] getData() {
         return data;
     }
-    
+
     public boolean isIpValid() {
         return ip != 0
                 && (src == Address.SUPRADIN.getValue() || src > 0x80);
     }
-    
+
     public String getIpAsString() {
         return String.format("%d.%d.%d.%d",
                 (ip >> 0) & 0xFF,
@@ -173,7 +171,6 @@ public class SupradinDataMessage {
         return true;
     }
 
-    
     @Override
     public String toString() {
         return "ip=" + getIpAsString() + ", src=" + getSrc() + ", dst=" + getDst() + ", command=" + getCommand() + ", data=" + HexDataUtils.bytesToHex(data);

@@ -1,7 +1,9 @@
 package com.gargon.smarthome.utils.http;
 
-import com.gargon.smarthome.Smarthome;
 import com.gargon.smarthome.SmarthomeDictionary;
+import com.gargon.smarthome.enums.Address;
+import com.gargon.smarthome.enums.Command;
+import com.gargon.smarthome.enums.Priority;
 import com.sun.net.httpserver.HttpExchange;
 import java.io.IOException;
 import java.util.Map;
@@ -26,22 +28,22 @@ public class MainHTTPHandler extends SupradinHTTPHandler {
         
         response += "\n"+PARAM_DST+"*:";
         response += "\n<select name=\""+PARAM_DST+"\">";
-        for (Map.Entry<Integer, String> entry : SmarthomeDictionary.getDevicesList().entrySet()) {
-            response += "<option value=\"" + entry.getKey() + "\">" + entry.getValue() + "</option>";
+        for (Address address : Address.values()) {
+            response += "<option value=\"" + address.getValue() + "\">" + address.toString() + "</option>";
         }
         response += "\n</select><br/>";
         
         response += "\n"+PARAM_PRI+"*:";
         response += "\n<select name=\""+PARAM_PRI+"\">";
-        for (Map.Entry<Integer, String> entry : SmarthomeDictionary.getPrioritiesList().entrySet()) {
-            response += "<option value=\"" + entry.getKey() + "\">" + entry.getValue() + "</option>";
+        for (Priority priority : Priority.values()) {
+            response += "<option value=\"" + priority.getValue() + "\">" + priority.toString() + "</option>";
         }
         response += "\n</select><br/>";
         
         response += "\n"+PARAM_CMD+"*:";
         response += "\n<select name=\""+PARAM_CMD+"\">";
-        for (Map.Entry<Integer, String> entry : SmarthomeDictionary.getCommandsList().entrySet()) {
-            response += "<option value=\"" + entry.getKey() + "\">" + entry.getValue() + "</option>";
+        for (Command command : Command.values()) {
+            response += "<option value=\"" + command.getValue() + "\">" + command.toString() + "</option>";
         }
         response += "\n</select><br/>";
         
@@ -50,17 +52,17 @@ public class MainHTTPHandler extends SupradinHTTPHandler {
         
         response += "\n"+AskHTTPHandler.PARAM_RESPONSE_SRC+"*:";
         response += "\n<select name=\""+AskHTTPHandler.PARAM_RESPONSE_SRC+"\">";
-        for (Map.Entry<Integer, String> entry : SmarthomeDictionary.getDevicesList().entrySet()) {
-            if (entry.getKey() != Smarthome.ADDRESS_BROADCAST){
-                response += "<option value=\"" + entry.getKey() + "\">" + entry.getValue() + "</option>";
+        for (Address address : Address.values()) {
+            if (address != Address.BROADCAST){
+                response += "<option value=\"" + address.getValue() + "\">" + address.toString() + "</option>";
             }
         }
         response += "\n</select><br/>";
         
         response += "\n"+AskHTTPHandler.PARAM_RESPONSE_CMD+"*:";
         response += "\n<select name=\""+AskHTTPHandler.PARAM_RESPONSE_CMD+"\">";
-        for (Map.Entry<Integer, String> entry : SmarthomeDictionary.getCommandsList().entrySet()) {
-                response += "<option value=\"" + entry.getKey() + "\">" + entry.getValue() + "</option>";
+        for (Command command : Command.values()) {
+            response += "<option value=\"" + command.getValue() + "\">" + command.toString() + "</option>";
         }
         response += "\n</select><br/>";
         
@@ -86,22 +88,22 @@ public class MainHTTPHandler extends SupradinHTTPHandler {
         
         response += "\n"+PARAM_DST+"*:";
         response += "\n<select name=\""+PARAM_DST+"\">";
-        for (Map.Entry<Integer, String> entry : SmarthomeDictionary.getDevicesList().entrySet()) {
-            response += "<option value=\"" + entry.getKey() + "\">" + entry.getValue() + "</option>";
+        for (Address address : Address.values()) {
+            response += "<option value=\"" + address.getValue() + "\">" + address.toString() + "</option>";
         }
         response += "\n</select><br/>";
         
         response += "\n"+PARAM_PRI+"*:";
         response += "\n<select name=\""+PARAM_PRI+"\">";
-        for (Map.Entry<Integer, String> entry : SmarthomeDictionary.getPrioritiesList().entrySet()) {
-            response += "<option value=\"" + entry.getKey() + "\">" + entry.getValue() + "</option>";
+        for (Priority priority : Priority.values()) {
+            response += "<option value=\"" + priority.getValue() + "\">" + priority.toString() + "</option>";
         }
         response += "\n</select><br/>";
         
         response += "\n"+PARAM_CMD+"*:";
         response += "\n<select name=\""+PARAM_CMD+"\">";
-        for (Map.Entry<Integer, String> entry : SmarthomeDictionary.getCommandsList().entrySet()) {
-            response += "<option value=\"" + entry.getKey() + "\">" + entry.getValue() + "</option>";
+        for (Command command : Command.values()) {
+            response += "<option value=\"" + command.getValue() + "\">" + command.toString() + "</option>";
         }
         response += "\n</select><br/>";
         

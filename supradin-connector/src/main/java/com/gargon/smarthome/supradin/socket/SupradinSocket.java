@@ -25,25 +25,25 @@ import java.util.concurrent.FutureTask;
 public class SupradinSocket {
 
     private volatile boolean active;
-    
+
     private final DatagramSocket socket;
     private final InetAddress ipAddress;
 
     private final byte[] recvBuf = new byte[1024];
     private final ExecutorService socketDataReciever;
-    
+
     private final List<SupradinSocketDataListener> dataListeners = new CopyOnWriteArrayList();
 
-    /**Создает объект SupradinSocket:
-    *  1) создает сокет для взаимодействия по UDP
-    *  2) создет поток-слушатель входящих сообщений, который
-    * в случае получения сообщений ретранслирует их dataListeners
-    * 
-    *  @param ip IP-адрес модуля Supradin
-    * 
-    *  @throws SocketException
-    *  @throws UnknownHostException
-    */
+    /**
+     * Создает объект SupradinSocket:
+     * 1) создает сокет для взаимодействия по UDP
+     * 2) создет поток-слушатель входящих сообщений, который
+     * в случае получения сообщений ретранслирует их dataListeners
+     *
+     * @param ip IP-адрес модуля Supradin
+     * @throws SocketException
+     * @throws UnknownHostException
+     */
     public SupradinSocket(String ip) throws SocketException, UnknownHostException {
         this.socket = new DatagramSocket();
         this.ipAddress = InetAddress.getByName(ip);
@@ -77,9 +77,10 @@ public class SupradinSocket {
         });
     }
 
-    /**Отправка пакета данных модулю Supradin на произвольный порт
+    /**
+     * Отправка пакета данных модулю Supradin на произвольный порт
      * через созданный UDP сокет
-     * 
+     *
      * @param port номер UDP порта сервера
      * @param data передаваемые данные
      * @return Возвращает признак успешной отправки данных
@@ -93,22 +94,23 @@ public class SupradinSocket {
         }
         return true;
     }
-    
-    /**Отправка пакета данных модулю Supradin на произвольный порт
-     * через ранее созданный UDP сокет, а также ожидание responseCount ответов сервера(Supradin) 
+
+    /**
+     * Отправка пакета данных модулю Supradin на произвольный порт
+     * через ранее созданный UDP сокет, а также ожидание responseCount ответов сервера(Supradin)
      * соответствующих фильтру responseFilter в течение responseTimeout миллисекунд
-     * 
-     * @param port номер UDP порта сервера
-     * @param data передаваемые данные
-     * @param responseFilter фильтр входящих сообщений
-     * @param responseCount количество ожидаемых ответов сервера
-     *       0 - только отправка сообщения
-     *      -1 - для ожидания всех сообщений в течение responseTimeout
+     *
+     * @param port            номер UDP порта сервера
+     * @param data            передаваемые данные
+     * @param responseFilter  фильтр входящих сообщений
+     * @param responseCount   количество ожидаемых ответов сервера
+     *                        0 - только отправка сообщения
+     *                        -1 - для ожидания всех сообщений в течение responseTimeout
      * @param responseTimeout время ожидания всех ответов в миллисекундах
      * @return Возвращает список всех полученных за время responseTimeout ответов
      */
-    public List<byte[]> sendAndWaitResponses(final int port, final byte[] data, 
-            final SupradinSocketResponseFilter responseFilter, final int responseCount, final int responseTimeout) {
+    public List<byte[]> sendAndWaitResponses(final int port, final byte[] data,
+                                             final SupradinSocketResponseFilter responseFilter, final int responseCount, final int responseTimeout) {
         ExecutorService exService = null;
         List<byte[]> r = null;
         try {
@@ -140,7 +142,7 @@ public class SupradinSocket {
                     //отправка сообщения
                     if (send(port, data)) {
                         synchronized (rdata) {
-                            if (responseCount < 0 
+                            if (responseCount < 0
                                     || rdata.size() < responseCount) {
                                 try {
                                     rdata.wait(responseTimeout);
@@ -166,14 +168,15 @@ public class SupradinSocket {
         }
         return r;
     }
-      
-    /**Отправка пакета данных модулю Supradin на произвольный порт
-     * через ранее созданный UDP сокет, а также ожидание ответа сервера(Supradin) 
+
+    /**
+     * Отправка пакета данных модулю Supradin на произвольный порт
+     * через ранее созданный UDP сокет, а также ожидание ответа сервера(Supradin)
      * соответствующего фильтру responseFilter в течение responseTimeout миллисекунд
-     * 
-     * @param port номер UDP порта сервера
-     * @param data передаваемые данные
-     * @param responseFilter фильтр входящих сообщений
+     *
+     * @param port            номер UDP порта сервера
+     * @param data            передаваемые данные
+     * @param responseFilter  фильтр входящих сообщений
      * @param responseTimeout время ожидания всех ответов в миллисекундах
      * @return Возвращает ответ сервера или null если ответ не был получен
      */
@@ -185,8 +188,8 @@ public class SupradinSocket {
         return null;
     }
 
-    /**Закрывает текущее соединение (UDP сокет)
-     * 
+    /**
+     * Закрывает текущее соединение (UDP сокет)
      */
     public void close() {
         active = false;
@@ -194,16 +197,18 @@ public class SupradinSocket {
         socketDataReciever.shutdown();
     }
 
-    /**Добавляет слушателя входящих сообщений Supradin модуля
-     * 
+    /**
+     * Добавляет слушателя входящих сообщений Supradin модуля
+     *
      * @param listener объект слушателя входящих сообщений Supradin модуля
      */
     public void addDatagramDataListener(SupradinSocketDataListener listener) {
         dataListeners.add(listener);
     }
 
-    /**Удаляет слушателя входящих сообщений Supradin модуля
-     * 
+    /**
+     * Удаляет слушателя входящих сообщений Supradin модуля
+     *
      * @param listener объект слушателя входящих сообщений Supradin модуля
      */
     public void removeDatagramDataListener(SupradinSocketDataListener listener) {

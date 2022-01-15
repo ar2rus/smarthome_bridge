@@ -1,7 +1,10 @@
 package com.gargon.smarthome.utils.http;
 
 import com.gargon.smarthome.SmarthomeDictionary;
-import com.gargon.smarthome.utils.DataFormat;
+import com.gargon.smarthome.enums.Address;
+import com.gargon.smarthome.enums.Command;
+import com.gargon.smarthome.enums.Priority;
+import com.gargon.smarthome.utils.HexDataUtils;
 import com.sun.net.httpserver.HttpExchange;
 import java.io.IOException;
 import java.util.Map;
@@ -74,16 +77,16 @@ public class AskHTTPHandler extends SupradinHTTPHandler {
 
             //send command 
             try {
-                byte[] rdata = callback.ask(dst, pri, cmd, DataFormat.hexToByteArray(hexData),
+                byte[] rdata = callback.ask(dst, pri, cmd, HexDataUtils.hexToByteArray(hexData),
                         rsrc, rcmd, rtm);
 
                 if (rdata != null) {
                     switch (rftCode) {
                         case 1:
-                            response = DataFormat.bytesToHex(rdata);
+                            response = HexDataUtils.bytesToHex(rdata);
                             break;
                         case 0:
-                            String r = SmarthomeDictionary.toString(rcmd, rdata);
+                            String r = SmarthomeDictionary.toString(Command.getByValue(rcmd), rdata);
                             if (r == null) {
                                 r = "";
                             }
@@ -102,19 +105,19 @@ public class AskHTTPHandler extends SupradinHTTPHandler {
                     + PARAM_CMD + "={command_id}[&" + PARAM_DAT + "={hex data}]&" + PARAM_RESPONSE_SRC + "={rsrc_id}&" + PARAM_RESPONSE_CMD + "={rcommand_id}[&"
                     + PARAM_RESPONSE_FORMAT + "={rformat_id}][&" + PARAM_RESPONSE_TIMEOUT + "={timeout_in_ms}]"
                     + "\n\ndst_id, rsrc_id = {";
-            for (Map.Entry<Integer, String> entry : SmarthomeDictionary.getDevicesList().entrySet()) {
-                response += entry.getValue() + " (" + entry.getKey() + "), ";
+            for (Address address : Address.values()) {
+                response += "<option value=\"" + address.getValue() + "\">" + address.toString() + "</option>";
             }
 
             response += "}";
             response += "\n\npriority = {";
-            for (Map.Entry<Integer, String> entry : SmarthomeDictionary.getPrioritiesList().entrySet()) {
-                response += entry.getValue() + " (" + entry.getKey() + "), ";
+            for (Priority priority : Priority.values()) {
+                response += "<option value=\"" + priority.getValue() + "\">" + priority.toString() + "</option>";
             }
             response += "}";
             response += "\n\ncommand_id, rcommand_id = {";
-            for (Map.Entry<Integer, String> entry : SmarthomeDictionary.getCommandsList().entrySet()) {
-                response += entry.getValue() + " (" + entry.getKey() + "), ";
+            for (Command command : Command.values()) {
+                response += "<option value=\"" + command.getValue() + "\">" + command.toString() + "</option>";
             }
             response += "}";
             response += "\n\nrformat_id = {";

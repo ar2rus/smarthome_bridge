@@ -1,11 +1,12 @@
 package com.gargon.smarthome.trigger;
 
 import com.gargon.smarthome.supradin.messages.SupradinDataMessage;
-import com.gargon.smarthome.utils.DataFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import com.gargon.smarthome.utils.HexDataUtils;
 import org.json.JSONObject;
 
 /**
@@ -49,7 +50,7 @@ public class TriggerTask {
             return new ArrayList();
         }
 
-        String test_hex = DataFormat.bytesToHex(test_data);
+        String test_hex = HexDataUtils.bytesToHex(test_data);
         if (test_hex == null) {
             return null;
         }
@@ -74,9 +75,9 @@ public class TriggerTask {
     public List<String> match(SupradinDataMessage m) {
         if (m != null) {
 
-            if ((message.getSrc_id() == -1 || message.getSrc_id() == m.getSrc())
-                    && (message.getDst_id() == -1 || message.getDst_id() == m.getDst())
-                    && (message.getCmd_id() == -1 || message.getCmd_id() == m.getCommand())) {
+            if ((message.getSrc_id() == -1 || message.getSrc_id() == m.getSrc().getValue())
+                    && (message.getDst_id() == -1 || message.getDst_id() == m.getDst().getValue())
+                    && (message.getCmd_id() == -1 || message.getCmd_id() == m.getCommand().getValue())) {
                 return check_data(message.getData(), m.getData());
             }
         }

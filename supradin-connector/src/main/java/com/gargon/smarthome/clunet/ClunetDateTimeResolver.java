@@ -11,7 +11,6 @@ import java.util.Calendar;
 import java.util.GregorianCalendar;
 
 /**
- *
  * @author gargon
  */
 public class ClunetDateTimeResolver implements SupradinDataListener {
@@ -28,13 +27,13 @@ public class ClunetDateTimeResolver implements SupradinDataListener {
             }
             connection.sendData(new SupradinDataMessage(message.getSrc(), Priority.INFO, Command.TIME_INFO,
                     new byte[]{
-                        (byte) (c.get(Calendar.YEAR) - 2000),
-                        (byte) (c.get(Calendar.MONTH) + 1),
-                        (byte) c.get(Calendar.DAY_OF_MONTH),
-                        (byte) c.get(Calendar.HOUR_OF_DAY),
-                        (byte) c.get(Calendar.MINUTE),
-                        (byte) c.get(Calendar.SECOND),
-                        (byte) dw}));
+                            (byte) (c.get(Calendar.YEAR) - 2000),
+                            (byte) (c.get(Calendar.MONTH) + 1),
+                            (byte) c.get(Calendar.DAY_OF_MONTH),
+                            (byte) c.get(Calendar.HOUR_OF_DAY),
+                            (byte) c.get(Calendar.MINUTE),
+                            (byte) c.get(Calendar.SECOND),
+                            (byte) dw}));
         }
     }
 

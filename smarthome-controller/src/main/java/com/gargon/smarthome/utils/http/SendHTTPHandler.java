@@ -1,7 +1,9 @@
 package com.gargon.smarthome.utils.http;
 
-import com.gargon.smarthome.SmarthomeDictionary;
-import com.gargon.smarthome.utils.DataFormat;
+import com.gargon.smarthome.enums.Address;
+import com.gargon.smarthome.enums.Command;
+import com.gargon.smarthome.enums.Priority;
+import com.gargon.smarthome.utils.HexDataUtils;
 import com.sun.net.httpserver.HttpExchange;
 import java.io.IOException;
 import java.util.Map;
@@ -41,7 +43,7 @@ public class SendHTTPHandler extends SupradinHTTPHandler {
 
             //send command 
             try {
-                if (callback.send(dst, pri, cmd, DataFormat.hexToByteArray(hexData))) {
+                if (callback.send(dst, pri, cmd, HexDataUtils.hexToByteArray(hexData))) {
                     response = "Ok";
                     responseCode = 200;
                 }
@@ -52,19 +54,19 @@ public class SendHTTPHandler extends SupradinHTTPHandler {
             response = "Wrong request format!"
                     + "\n\n\nusage: http://HOST:PORT" + URI + "?" + PARAM_DST + "={dst_id}&" + PARAM_PRI + "={priority}&" + PARAM_CMD + "={command_id}[&" + PARAM_DAT + "={hex data}]"
                     + "\n\ndst_id = {";
-            for (Map.Entry<Integer, String> entry : SmarthomeDictionary.getDevicesList().entrySet()) {
-                response += entry.getValue() + " (" + entry.getKey() + "), ";
+            for (Address address : Address.values()) {
+                response += "<option value=\"" + address.getValue() + "\">" + address.toString() + "</option>";
             }
             
             response += "}";
             response += "\n\npriority = {";
-            for (Map.Entry<Integer, String> entry : SmarthomeDictionary.getPrioritiesList().entrySet()) {
-                response += entry.getValue() + " (" + entry.getKey() + "), ";
+            for (Priority priority : Priority.values()) {
+                response += "<option value=\"" + priority.getValue() + "\">" + priority.toString() + "</option>";
             }
             response += "}";
             response += "\n\ncommand_id = {";
-            for (Map.Entry<Integer, String> entry : SmarthomeDictionary.getCommandsList().entrySet()) {
-                response += entry.getValue() + " (" + entry.getKey() + "), ";
+            for (Command command : Command.values()) {
+                response += "<option value=\"" + command.getValue() + "\">" + command.toString() + "</option>";
             }
             response += "}";
             

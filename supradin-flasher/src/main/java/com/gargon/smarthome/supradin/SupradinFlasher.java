@@ -1,18 +1,17 @@
 package com.gargon.smarthome.supradin;
 
-import com.gargon.smarthome.Smarthome;
+
 import com.gargon.smarthome.clunet.Clunet;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
+import com.gargon.smarthome.enums.Address;
+import com.gargon.smarthome.enums.Command;
+import com.gargon.smarthome.enums.Priority;
 import com.gargon.smarthome.supradin.messages.SupradinDataMessage;
 import com.gargon.smarthome.utils.IntelHexReader;
+import org.apache.commons.cli.*;
+
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import org.apache.commons.cli.DefaultParser;
 
 /**
  *
@@ -154,7 +153,7 @@ public class SupradinFlasher {
                 //Clunet.sendFirmware(connection, deviceId, bootTimeout, firmwarePath, firmwareMaxSize, System.out);
 
                 IntelHexReader hexReader = new IntelHexReader();
-                log("Loading HEX");
+                log("Loading HEX: \""+firmwarePath+"\"");
                 if (hexReader.read(firmwarePath)) {
 
                     if (firmwareMaxSize < 0 || firmwareMaxSize >= hexReader.getLength()) {
@@ -165,15 +164,15 @@ public class SupradinFlasher {
 
                             @Override
                             public boolean filter(SupradinDataMessage supradinRecieved) {
-                                return supradinRecieved.getCommand() == Smarthome.COMMAND_BOOT_CONTROL
-                                        && supradinRecieved.getSrc() == deviceId_;
+                                return supradinRecieved.getCommand() == Command.BOOT_CONTROL
+                                        && supradinRecieved.getSrc().getValue() == deviceId_;
                             }
                         };
 
                         SupradinDataMessage r = null;
                         if (bootTimeout >= 0) {
                             log("Sending reboot command...");
-                            r = connection.sendDataAndWaitResponse(new SupradinDataMessage(deviceId, Smarthome.PRIORITY_COMMAND, Smarthome.COMMAND_REBOOT),
+                            r = connection.sendDataAndWaitResponse(new SupradinDataMessage(Address.getByValue(deviceId), Priority.COMMAND, Command.REBOOT),
                                     bootControlFilter, bootTimeout);
                         }
                         if (bootTimeout < 0 || r != null) {
@@ -182,7 +181,7 @@ public class SupradinFlasher {
                             if (bootTimeout < 0 || (r.getData().length == 1 && r.getData()[0] == COMMAND_FIRMWARE_UPDATE_START)) {
                                 log("Bootloader detected");
                                 //Сразу же посылаем на адрес устройства CLUNET_COMMAND_BOOT_CONTROL, в данных 1. Это переводит устройство в режим прошивки.
-                                r = connection.sendDataAndWaitResponse(new SupradinDataMessage(deviceId, Smarthome.PRIORITY_COMMAND, Smarthome.COMMAND_BOOT_CONTROL,
+                                r = connection.sendDataAndWaitResponse(new SupradinDataMessage(Address.getByValue(deviceId), Priority.COMMAND, Command.BOOT_CONTROL,
                                         new byte[]{COMMAND_FIRMWARE_UPDATE_INIT}), bootControlFilter, responseTimeout);
                                 //Устройство посылает CLUNET_COMMAND_BOOT_CONTROL, первый байт данных - 2, подтверждает, что перешли в режим прошивки.
                                 //Следующие два байта - это размер страницы.
@@ -209,7 +208,7 @@ public class SupradinFlasher {
                                             data[3] = (byte) (len1 >> 8);
 
                                             System.arraycopy(hexReader.getData(), i + j, data, 4, len1);
-                                            r = connection.sendDataAndWaitResponse(new SupradinDataMessage(deviceId, Smarthome.PRIORITY_COMMAND, Smarthome.COMMAND_BOOT_CONTROL, data),
+                                            r = connection.sendDataAndWaitResponse(new SupradinDataMessage(Address.getByValue(deviceId), Priority.COMMAND, Command.BOOT_CONTROL, data),
                                                     bootControlFilter, responseTimeout);
 
                                             //Устройство посылает CLUNET_COMMAND_BOOT_CONTROL, в данных 4 - это подтверждает, что страница прошита.
@@ -231,7 +230,7 @@ public class SupradinFlasher {
 
                                     //Посылаем в устройство CLUNET_COMMAND_BOOT_CONTROL, в данных 5 
                                     //Это завершает работу бутлоадера и запускает только что прошитый код.
-                                    connection.sendData(new SupradinDataMessage(deviceId, Smarthome.PRIORITY_COMMAND, Smarthome.COMMAND_BOOT_CONTROL,
+                                    connection.sendData(new SupradinDataMessage(Address.getByValue(deviceId), Priority.COMMAND, Command.BOOT_CONTROL,
                                             new byte[]{COMMAND_FIRMWARE_UPDATE_DONE}));
                                     log("Done!");
 
