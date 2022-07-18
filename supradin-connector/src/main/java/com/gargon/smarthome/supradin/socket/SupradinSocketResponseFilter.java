@@ -1,18 +1,16 @@
 package com.gargon.smarthome.supradin.socket;
 
 /**
- * Интерфейс описывает фильтр данных ответа Supradin модуля
- *
- * @author gargon
+ * Интерфейс описывает фильтр данных ответа модуля Supradin
  */
 public interface SupradinSocketResponseFilter {
 
     /**
      * Фильтрация данных
      *
-     * @param dataRecieved пакет фильтруемых данных
-     * @return Возвращает true если данные прошли фильтрацию
+     * @param dataReceived пакет фильтруемых данных
+     * @return true если данные прошли фильтрацию
      */
-    public boolean filter(byte[] dataRecieved);
+    public boolean filter(byte[] dataReceived);
 
 }

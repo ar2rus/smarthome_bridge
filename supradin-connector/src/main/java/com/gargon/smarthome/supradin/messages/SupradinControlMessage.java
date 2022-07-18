@@ -1,8 +1,5 @@
 package com.gargon.smarthome.supradin.messages;
 
-/**
- * @author gargon
- */
 public class SupradinControlMessage {
 
     //control command codes

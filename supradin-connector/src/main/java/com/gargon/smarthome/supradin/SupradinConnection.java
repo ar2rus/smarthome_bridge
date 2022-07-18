@@ -1,5 +1,11 @@
 package com.gargon.smarthome.supradin;
 
+import com.gargon.smarthome.model.enums.SmarthomeCommand;
+import com.gargon.smarthome.model.enums.SmarthomeDevice;
+import com.gargon.smarthome.protocol.SmarthomeConnection;
+import com.gargon.smarthome.protocol.SmarthomeDataListener;
+import com.gargon.smarthome.protocol.SmarthomeMessage;
+import com.gargon.smarthome.protocol.SmarthomeMessageFilter;
 import com.gargon.smarthome.supradin.messages.SupradinControlMessage;
 import com.gargon.smarthome.supradin.messages.SupradinDataMessage;
 import com.gargon.smarthome.supradin.socket.SupradinSocket;
@@ -9,11 +15,11 @@ import com.gargon.smarthome.supradin.socket.SupradinSocketDataListener;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.Map;
+import java.util.concurrent.*;
 
 /**
  * Класс реализует API для взаимодействия с модулем Supradin.
@@ -22,10 +28,8 @@ import java.util.concurrent.TimeUnit;
  * 2)connect, addDataListener;
  * 3)sendData / sendDataAndWaitResponse / sendDataAndWaitResponses;
  * 4)close.
- *
- * @author gargon
  */
-public class SupradinConnection {
+public class SupradinConnection implements SmarthomeConnection {
 
     /**
      * IP адрес Supradin модуля по умолчанию
@@ -52,19 +56,20 @@ public class SupradinConnection {
     private final static int SUPRADIN_CONNECTION_KEEPER_PERIOD = 10; //s
 
     /**
-     * Время ожидания ответа на отправленное сообщение нп порт управления, в миллисекундах
+     * Время ожидания ответа на отправленное сообщение на порт управления, в миллисекундах
      */
     private final static int SUPRADIN_CONNECTION_CONTROL_RESPONSE_TIMEOUT = 2000; //ms
 
-    private volatile boolean connected;
-    private volatile boolean active;
+    private volatile boolean connected = false;
+    private volatile boolean active = false;
     private char lastControlMessageId;
 
     private SupradinSocket socketWrapper;
     private SupradinSocketDataListener socketListener;
     private ScheduledExecutorService connectionKeeper;
 
-    private final List<SupradinDataListener> dataListeners = new CopyOnWriteArrayList();
+    private final List<SupradinDataListener> dataListeners = new CopyOnWriteArrayList<>();
+    private final Map<SmarthomeDataListener, SupradinDataListener> smarthomeDataListenerMap = Collections.synchronizedMap(new HashMap<>());
 
     /**
      * Создает объект класса с предустановленными параметрами подключения:
@@ -122,17 +127,14 @@ public class SupradinConnection {
 
     /**
      * Открывает соединение с модулем Supradin.
-     * Внимание! Подключение еще не установлено, команда на подключение модулю не отправлена, положительный ответ не получен.
-     * Открывается лишь сокет соединения. Для успешного установления активного подключения в дальнейшем следует вызывать {@link SupradinConnection#connect()}.
      * Для закрытия текущего соединения следует вызывать  {@link SupradinConnection#close()}.
      *
-     * @return Возвращает признак успешного открытия соединения
+     * @return признак успешного открытия соединения
      */
     public boolean open() {
         try {
             socketWrapper = new SupradinSocket(host);
-            connected = false;
-            return true;
+            return connect();
         } catch (SocketException | UnknownHostException ex) {
             socketWrapper = null;
         }
@@ -144,18 +146,20 @@ public class SupradinConnection {
      * и закрывет соединение (сокет). Дальнейшее повторное открытие сокета методом {@link SupradinConnection#open()} невозможно.
      * Предварительный вызов метода  {@link SupradinConnection#disconnect()} делать не нужно.
      */
-    public void close() {
+    public boolean close() {
+        boolean r = false;
         if (socketWrapper != null) {
-            disconnect();
+            r = disconnect();
             socketWrapper.close();
         }
+        return r;
     }
 
     /**
      * Отправляет команду на управляющий порт модуля Supradin и получает ответ на нее.
      *
      * @param command код команды
-     * @return Возвращает ответ сервера на отправленную команду или null если ответ получен не был
+     * @return ответ сервера на отправленную команду или null если ответ получен не был
      */
     private synchronized byte[] control(byte command) {
         if (socketWrapper != null) {
@@ -164,11 +168,10 @@ public class SupradinConnection {
             return socketWrapper.sendAndWaitResponse(controlPort,
                     dataToSend,
                     new SupradinSocketResponseFilter() {
-
                         @Override
-                        public boolean filter(byte[] dataRecieved) {
+                        public boolean filter(byte[] dataReceived) {
                             char id = SupradinControlMessage.getCommandId(dataToSend);
-                            return id > 0 && id == SupradinControlMessage.getCommandId(dataRecieved);
+                            return id > 0 && id == SupradinControlMessage.getCommandId(dataReceived);
                         }
                     },
                     SUPRADIN_CONNECTION_CONTROL_RESPONSE_TIMEOUT);
@@ -183,11 +186,11 @@ public class SupradinConnection {
      * серверу и, тем самым, поддерживающим соединение в активном состоянии
      * (в том числе открывающий соединение, если его не удалось установить командой COMMAND_CONNECT).
      *
-     * @return возвращает признак, если соединение удалось установить сразу. Так или иначе,
+     * @return признак, если соединение удалось установить сразу. Так или иначе,
      * даже если получен false, попытки установить соединение будут осуществляться запущенным
      * connectionKeeper'ом вызовом ping()
      */
-    public boolean connect() {
+    private boolean connect() {
         if (!connected) {
             byte[] response = control(SupradinControlMessage.CONTROL_COMMAND_CONNECT);
 
@@ -195,12 +198,12 @@ public class SupradinConnection {
             socketWrapper.addDatagramDataListener(socketListener = new SupradinSocketDataListener() {
 
                 @Override
-                public void dataRecieved(int port, byte[] data) {
+                public void dataReceived(int port, byte[] data) {
                     if (port == dataPort) {
                         SupradinDataMessage supradin = new SupradinDataMessage(data);
                         if (supradin.isValid()) {
                             for (SupradinDataListener listener : dataListeners) {
-                                listener.dataRecieved(connection, supradin);
+                                listener.dataReceived(connection, supradin);
                             }
                         }
                     }
@@ -219,7 +222,7 @@ public class SupradinConnection {
             connected = true;
             return SupradinControlMessage.isConnectionActive(response);
         }
-        return active;
+        return false;
     }
 
     /**
@@ -227,7 +230,7 @@ public class SupradinConnection {
      * которая служит для поддержания подключения активным или восстановления ранее разорванного подключения.
      * В самостоятельном вызове данного метода нет необходимости
      *
-     * @return Возвращает признак активности соединения
+     * @return признак активности соединения
      */
     protected boolean ping() {
         if (connected) {
@@ -238,11 +241,11 @@ public class SupradinConnection {
 
     /**
      * Отправляет команду на разрыв текущего подключения с модулем Supradin.
-     * Дальнейшей повторное и далее подключение возможно методом {@link SupradinConnection#connect()}.
+     * Дальнейшее повторное и далее подключение возможно методом {@link SupradinConnection#connect()}.
      *
-     * @return Возвращает признак успешного разрыва активного подключения
+     * @return признак успешного разрыва активного подключения
      */
-    public boolean disconnect() {
+    private boolean disconnect() {
         if (connected) {
             if (connectionKeeper != null) {
                 connectionKeeper.shutdown();
@@ -259,12 +262,19 @@ public class SupradinConnection {
     /**
      * Отправляет пакет данных на порт данных модуля Supradin для ранее установленго активного подключения.
      *
-     * @param message пакет данных в формате SupradinDataMessage
-     * @return Возвращает признак успешной отправки сообщения
+     * @return признак успешной отправки сообщения
      */
-    public boolean sendData(SupradinDataMessage message) {
+    @Override
+    public boolean sendData(SmarthomeDevice device, SmarthomeCommand command, byte[] data) {
         if (socketWrapper != null && connected) {
-            return socketWrapper.send(dataPort, message.toByteArray());
+            return socketWrapper.send(dataPort, createMessage(device, command, data).toByteArray());
+        }
+        return false;
+    }
+
+    public boolean sendData(int ip, int dst, int src, int command, byte[] data) {
+        if (socketWrapper != null && connected) {
+            return socketWrapper.send(dataPort, new SupradinDataMessage(ip, dst, src, command, data).toByteArray());
         }
         return false;
     }
@@ -272,24 +282,25 @@ public class SupradinConnection {
     /**
      * Отправляет пакет данных на порт данных модуля Supradin для ранее установленго активного подключения и
      * ожидает responseCount ответов сервера
-     * соответствующих фильтру responseFilter в течение responseTimeout миллисекунд.
+     * соответствующих фильтру responseMessageFilter в течение responseTimeout миллисекунд.
      *
-     * @param message         пакет данных в формате SupradinDataMessage
-     * @param responseFilter  фильтр входящих сообщений
-     * @param responseCount   количество ожидаемых ответов сервера:
-     *                        0 - только отправка сообщения;
-     *                        -1 - для ожидания всех сообщений в течение responseTimeout;
-     * @param responseTimeout время ожидания всех ответов в миллисекундах
-     * @return Возвращает список всех полученных за время responseTimeout ответов
+     * @param responseMessageFilter фильтр входящих сообщений
+     * @param responseCount         количество ожидаемых ответов сервера:
+     *                              0 - только отправка сообщения;
+     *                              -1 - для ожидания всех сообщений в течение responseTimeout;
+     * @param responseTimeout       время ожидания всех ответов в миллисекундах
+     * @return список всех полученных за время responseTimeout ответов
      */
-    public List<SupradinDataMessage> sendDataAndWaitResponses(SupradinDataMessage message, SupradinConnectionResponseFilter responseFilter,
-                                                              int responseCount, int responseTimeout) {
+    @Override
+    public List<SmarthomeMessage> sendDataAndWaitResponses(SmarthomeDevice device, SmarthomeCommand command, byte[] data,
+                                                           SmarthomeMessageFilter responseMessageFilter, int responseCount, int responseTimeout) {
         if (socketWrapper != null && connected) {
-            List<byte[]> responses = socketWrapper.sendAndWaitResponses(dataPort, message.toByteArray(), responseFilter, responseCount, responseTimeout);
+            List<byte[]> responses = socketWrapper.sendAndWaitResponses(dataPort, createMessage(device, command, data).toByteArray(),
+                    convertFilter(responseMessageFilter), responseCount, responseTimeout);
             if (responses != null) {
-                List<SupradinDataMessage> r = new ArrayList();
+                List<SmarthomeMessage> r = new ArrayList<>();
                 for (byte[] response : responses) {
-                    r.add(new SupradinDataMessage(response));
+                    r.add(convertToSmarthomeMessage(new SupradinDataMessage(response)));
                 }
                 return r;
             }
@@ -299,67 +310,108 @@ public class SupradinConnection {
 
     /**
      * Отправляет пакет данных на порт данных модуля Supradin для ранее установленго активного подключения и
-     * ожидает ответа сервера соответствующего фильтру responseFilter в течение responseTimeout миллисекунд.
+     * ожидает ответа сервера соответствующего фильтру responseMessageFilter в течение responseTimeout миллисекунд.
      *
-     * @param message         пакет данных в формате SupradinDataMessage
-     * @param responseFilter  фильтр входящих сообщений
+     * @param responseMessageFilter  фильтр входящих сообщений
      * @param responseTimeout время ожидания всех ответов в миллисекундах
-     * @return Возвращает ответ сервера или null если ответ не был получен
+     * @return ответ сервера или null если ответ не был получен
      */
-    public SupradinDataMessage sendDataAndWaitResponse(SupradinDataMessage message, SupradinConnectionResponseFilter responseFilter, int responseTimeout) {
+    @Override
+    public SmarthomeMessage sendDataAndWaitResponse(SmarthomeDevice device, SmarthomeCommand command, byte[] data,
+                                                       SmarthomeMessageFilter responseMessageFilter, int responseTimeout) {
         if (socketWrapper != null && connected) {
-            byte[] response = socketWrapper.sendAndWaitResponse(dataPort, message.toByteArray(), responseFilter, responseTimeout);
+            byte[] response = socketWrapper.sendAndWaitResponse(dataPort, createMessage(device, command, data).toByteArray(),
+                    convertFilter(responseMessageFilter), responseTimeout);
             if (response != null) {
-                return new SupradinDataMessage(response);
+                return convertToSmarthomeMessage(new SupradinDataMessage(response));
             }
         }
         return null;
     }
 
     /**
-     * Добавляет слушателя входящих сообщений данных Supradin модуля
+     * Добавляет слушателя входящих сообщений Supradin модуля
      *
      * @param listener объект слушателя входящих сообщений Supradin модуля
      */
-    public void addDataListener(SupradinDataListener listener) {
-        dataListeners.add(listener);
+    public boolean addDataListener(SupradinDataListener listener) {
+        return dataListeners.add(listener);
     }
 
     /**
-     * Удаляет слушателя входящих сообщений данных Supradin модуля
+     * Удаляет слушателя входящих сообщений Supradin модуля
      *
      * @param listener объект слушателя входящих сообщений Supradin модуля
      */
-    public void removeDataListener(SupradinDataListener listener) {
-        dataListeners.remove(listener);
+    public boolean removeDataListener(SupradinDataListener listener) {
+        return dataListeners.remove(listener);
+    }
+
+    @Override
+    public boolean bindListener(final SmarthomeDataListener listener) {
+        if (listener != null) {
+            SupradinDataListener supradinDataListener;
+            if (addDataListener(supradinDataListener = new SupradinDataListener() {
+                @Override
+                public void dataReceived(SupradinConnection connection, SupradinDataMessage receivedMessage) {
+                    listener.dataReceived(connection, convertToSmarthomeMessage(receivedMessage));
+                }
+            })) {
+                smarthomeDataListenerMap.put(listener, supradinDataListener);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean unbindDataListener(SmarthomeDataListener smarthomeDataListener) {
+        SupradinDataListener supradinDataListener = smarthomeDataListenerMap.get(smarthomeDataListener);
+        return supradinDataListener != null && removeDataListener(supradinDataListener);
     }
 
     /**
-     * IP адрес соединения с Supradin модулем
+     * IP адрес соединения с модулем Supradin
      *
-     * @return Возвращает текущий IP адрес соединения с Supradin модулем
+     * @return текущий IP адрес соединения с модулем Supradin
      */
     public String getHost() {
         return host;
     }
 
     /**
-     * Номер порта управления соединения с Supradin модулем
+     * Номер порта управления соединения с модулем Supradin
      *
-     * @return Возвращает номер порта управления соединения с Supradin модулем
+     * @return номер порта управления соединения с модулем Supradin
      */
     public int getControlPort() {
         return controlPort;
     }
 
     /**
-     * Номер порта данных соединения с Supradin модулем
+     * Номер порта данных соединения с модулем Supradin
      *
-     * @return Возвращает номер порта данных соединения с Supradin модулем
+     * @return номер порта данных соединения с модулем Supradin
      */
     public int getDataPort() {
         return dataPort;
     }
 
+    private SupradinSocketResponseFilter convertFilter(final SmarthomeMessageFilter f) {
+        return new SupradinSocketResponseFilter() {
+            @Override
+            public boolean filter(byte[] dataReceived) {
+                return f.filter(convertToSmarthomeMessage(new SupradinDataMessage(dataReceived)));
+            }
+        };
+    }
+
+    private static SupradinDataMessage createMessage(SmarthomeDevice device, SmarthomeCommand command, byte[] data){
+        return new SupradinDataMessage(device.getAddress(), 0, command.getCode(), data);
+    }
+
+    private static SmarthomeMessage convertToSmarthomeMessage(SupradinDataMessage m){
+        return new SmarthomeMessage(m.getSrc(), m.getDst(), m.getCommand(), m.getData());
+    }
 
 }

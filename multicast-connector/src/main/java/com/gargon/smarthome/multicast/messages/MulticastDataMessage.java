@@ -4,25 +4,21 @@ import com.gargon.smarthome.utils.HexDataUtils;
 
 import java.util.Arrays;
 
-/**
- *
- * @author gargon
- */
 public class MulticastDataMessage {
 
-    private final static int MESSAGE_LENGTH  = 4;
-    
-    private final static int OFFSET_SRC_PRIO = 0;
-    private final static int OFFSET_DST      = 1;
-    private final static int OFFSET_COMMAND  = 2;
-    private final static int OFFSET_SIZE     = 3;
+    private final static int MESSAGE_LENGTH = 4;
 
-    
+    private final static int OFFSET_SRC_PRIO = 0;
+    private final static int OFFSET_DST = 1;
+    private final static int OFFSET_COMMAND = 2;
+    private final static int OFFSET_SIZE = 3;
+
+
     private int src;    //union prio
-    private int dst;    
+    private int dst;
     private int command;
     private int size = -1;
-    
+
     private byte[] data;
 
     public MulticastDataMessage(byte[] buf) {
@@ -32,7 +28,7 @@ public class MulticastDataMessage {
                 src = buf[OFFSET_SRC_PRIO] & 0xFF;
                 dst = buf[OFFSET_DST] & 0xFF;
                 command = buf[OFFSET_COMMAND] & 0xFF;
-                
+
                 data = Arrays.copyOfRange(buf, MESSAGE_LENGTH, buf.length);
             } else {
                 size = -1;  //not valid packet
@@ -41,18 +37,21 @@ public class MulticastDataMessage {
     }
 
     public MulticastDataMessage(int dst, int src_prio, int command, byte[] data) {
-        if (data != null) {
-            this.src = src_prio;
-            this.dst = dst;
-            this.command = command;
 
+        this.src = src_prio;
+        this.dst = dst;
+        this.command = command;
+
+        if (data != null) {
             this.size = data.length;
             this.data = data;
+        } else {
+            this.size = 0;
         }
     }
-    
-     public MulticastDataMessage(int dst, int src_prio, int command) {
-         this(dst, src_prio, command, new byte[]{});
+
+    public MulticastDataMessage(int dst, int src_prio, int command) {
+        this(dst, src_prio, command, null);
     }
 
     public boolean isValid() {
@@ -63,13 +62,15 @@ public class MulticastDataMessage {
         byte[] array = null;
         if (size >= 0) {
             array = new byte[MESSAGE_LENGTH + size];
-            
+
             array[OFFSET_SRC_PRIO] = (byte) src;
             array[OFFSET_DST] = (byte) dst;
             array[OFFSET_COMMAND] = (byte) command;
-            
+
             array[OFFSET_SIZE] = (byte) size;
-            System.arraycopy(data, 0, array, MESSAGE_LENGTH, size);
+            if (size > 0) {
+                System.arraycopy(data, 0, array, MESSAGE_LENGTH, size);
+            }
         }
         return array;
     }
@@ -132,7 +133,6 @@ public class MulticastDataMessage {
         return true;
     }
 
-    
     @Override
     public String toString() {
         return "src=" + src + ", dst=" + dst + ", command=" + command + ", data=" + HexDataUtils.bytesToHex(data);

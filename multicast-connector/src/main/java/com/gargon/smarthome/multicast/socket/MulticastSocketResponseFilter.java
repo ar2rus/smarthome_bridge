@@ -1,16 +1,13 @@
 package com.gargon.smarthome.multicast.socket;
 
-/**Интерфейс описывает фильтр данных ответа  мультикаст-группы
- *
- * @author gargon
- */
 public interface MulticastSocketResponseFilter {
-    
-    /**Фильтрация данных
-     * 
-     * @param dataRecieved пакет фильтруемых данных
-     * @return Возвращает true если данные прошли фильтрацию
+
+    /**
+     * Фильтрация данных
+     *
+     * @param dataReceived пакет фильтруемых данных
+     * @return true если данные прошли фильтрацию
      */
-    public boolean filter(byte[] dataRecieved);
-    
+    boolean filter(byte[] dataReceived);
+
 }

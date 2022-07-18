@@ -6,8 +6,6 @@ import com.gargon.smarthome.supradin.messages.SupradinDataMessage;
 /**
  * Класс реализует абстрактный фильтр данных, получаемых с модуля Supradin.
  * Производится первоначальная проверка данных на соответствие формату SupradinDataMessage
- *
- * @author gargon
  */
 public abstract class SupradinConnectionResponseFilter implements SupradinSocketResponseFilter {
 
@@ -15,22 +13,22 @@ public abstract class SupradinConnectionResponseFilter implements SupradinSocket
      * Абстрактный метод фильтрации данных формата SupradinDataMessage
      * по дополнительным параметрам
      *
-     * @param supradinRecieved полученное сообщение формата SupradinDataMessage
-     * @return Возвращает TRUE если сообщение прошло фильтр
+     * @param receivedMessage полученное сообщение формата SupradinDataMessage
+     * @return TRUE если сообщение пропущено фильтром
      */
-    public abstract boolean filter(SupradinDataMessage supradinRecieved);
+    public abstract boolean filter(SupradinDataMessage receivedMessage);
 
     /**
      * Реализует фильтр интерфейса SupradinSocketResponseFilter,
      * в котором производится предпроверка на соответствие данных формату SupradinDataMessage
      *
-     * @param dataRecieved фильтруемый пакет данных
-     * @return Возвращает признак соответствия данных формату SupradinDataMessage
+     * @param dataReceived фильтруемый пакет данных
+     * @return признак соответствия данных формату SupradinDataMessage
      */
     @Override
-    public boolean filter(byte[] dataRecieved) {
-        if (dataRecieved != null) {
-            SupradinDataMessage s = new SupradinDataMessage(dataRecieved);
+    public boolean filter(byte[] dataReceived) {
+        if (dataReceived != null) {
+            SupradinDataMessage s = new SupradinDataMessage(dataReceived);
             if (s.isValid()) {
                 return filter(s);
             }

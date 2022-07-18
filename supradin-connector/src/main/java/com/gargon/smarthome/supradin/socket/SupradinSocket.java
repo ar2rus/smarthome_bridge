@@ -17,10 +17,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
 
 /**
- * Класс обеспечивает взаимодействие с модулем Supradin посредством UDP
- * соединения
- *
- * @author gargon
+ * Взаимодействие с модулем Supradin посредством UDP соединения
  */
 public class SupradinSocket {
 
@@ -32,7 +29,7 @@ public class SupradinSocket {
     private final byte[] recvBuf = new byte[1024];
     private final ExecutorService socketDataReciever;
 
-    private final List<SupradinSocketDataListener> dataListeners = new CopyOnWriteArrayList();
+    private final List<SupradinSocketDataListener> dataListeners = new CopyOnWriteArrayList<>();
 
     /**
      * Создает объект SupradinSocket:
@@ -58,15 +55,14 @@ public class SupradinSocket {
                     try {
                         DatagramPacket recvPacket = new DatagramPacket(recvBuf, recvBuf.length);
                         while (true) {
-                            //fucking android ->
+                            //fucking android:
                             //после получения первого сообщения устанавливает размер recvBuf равный размеру этого первого сообщения
                             recvPacket.setLength(recvBuf.length);
-
                             socket.receive(recvPacket);
                             byte[] data = Arrays.copyOfRange(recvPacket.getData(), recvPacket.getOffset(), recvPacket.getLength() - recvPacket.getOffset());
 
                             for (SupradinSocketDataListener listener : dataListeners) {
-                                listener.dataRecieved(recvPacket.getPort(), data);
+                                listener.dataReceived(recvPacket.getPort(), data);
                             }
                         }
                     } catch (Exception ex) {
@@ -83,7 +79,7 @@ public class SupradinSocket {
      *
      * @param port номер UDP порта сервера
      * @param data передаваемые данные
-     * @return Возвращает признак успешной отправки данных
+     * @return признак успешной отправки данных
      */
     public synchronized boolean send(int port, byte[] data) {
         try {
@@ -97,8 +93,8 @@ public class SupradinSocket {
 
     /**
      * Отправка пакета данных модулю Supradin на произвольный порт
-     * через ранее созданный UDP сокет, а также ожидание responseCount ответов сервера(Supradin)
-     * соответствующих фильтру responseFilter в течение responseTimeout миллисекунд
+     * через ранее созданный UDP сокет, а также ожидание <code>responseCount</code> ответов сервера(Supradin)
+     * соответствующих фильтру <code>responseFilter</code> в течение <code>responseTimeout</code> миллисекунд
      *
      * @param port            номер UDP порта сервера
      * @param data            передаваемые данные
@@ -107,7 +103,7 @@ public class SupradinSocket {
      *                        0 - только отправка сообщения
      *                        -1 - для ожидания всех сообщений в течение responseTimeout
      * @param responseTimeout время ожидания всех ответов в миллисекундах
-     * @return Возвращает список всех полученных за время responseTimeout ответов
+     * @return список всех полученных за время responseTimeout ответов
      */
     public List<byte[]> sendAndWaitResponses(final int port, final byte[] data,
                                              final SupradinSocketResponseFilter responseFilter, final int responseCount, final int responseTimeout) {
@@ -117,7 +113,7 @@ public class SupradinSocket {
             exService = Executors.newSingleThreadExecutor();
             FutureTask<List<byte[]>> futureTask = new FutureTask(new Callable() {
 
-                private final List<byte[]> rdata = new ArrayList();
+                private final List<byte[]> rdata = new ArrayList<>();
 
                 @Override
                 public List<byte[]> call() {
@@ -126,7 +122,7 @@ public class SupradinSocket {
                     addDatagramDataListener(listener = new SupradinSocketDataListener() {
 
                         @Override
-                        public void dataRecieved(int port_, byte[] data_) {
+                        public void dataReceived(int port_, byte[] data_) {
                             if (port == port_ && responseFilter.filter(data_)) {
                                 synchronized (rdata) {
                                     rdata.add(data_);
@@ -178,7 +174,7 @@ public class SupradinSocket {
      * @param data            передаваемые данные
      * @param responseFilter  фильтр входящих сообщений
      * @param responseTimeout время ожидания всех ответов в миллисекундах
-     * @return Возвращает ответ сервера или null если ответ не был получен
+     * @return ответ сервера или null если ответ не был получен
      */
     public byte[] sendAndWaitResponse(int port, byte[] data, SupradinSocketResponseFilter responseFilter, int responseTimeout) {
         List<byte[]> responses = sendAndWaitResponses(port, data, responseFilter, 1, responseTimeout);

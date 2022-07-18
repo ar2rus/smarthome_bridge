@@ -1,8 +1,5 @@
 package com.gargon.smarthome.utils;
 
-/**
- * @author gargon
- */
 public class HexDataUtils {
 
     private static String byteArrayToHex(byte[] a) {

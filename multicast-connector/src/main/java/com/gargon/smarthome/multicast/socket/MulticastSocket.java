@@ -18,9 +18,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
 
-/*
- * @author gargon
- */
 public class MulticastSocket {
     
     private volatile boolean active;
@@ -28,10 +25,10 @@ public class MulticastSocket {
     private final java.net.MulticastSocket socket;
 
     private final byte[] recvBuf = new byte[1024];
-    private final ExecutorService socketDataReciever;
+    private final ExecutorService socketDataReceiver;
     private final InetAddress multicastGroup;
     
-    private final List<MulticastSocketDataListener> dataListeners = new CopyOnWriteArrayList();
+    private final List<MulticastSocketDataListener> dataListeners = new CopyOnWriteArrayList<>();
 
     /**Создает объект MulticastSocket:
     *  1) создает сокет для взаимодействия по UDP
@@ -52,8 +49,10 @@ public class MulticastSocket {
         socket.joinGroup(multicastGroup);
         active = true;
 
-        socketDataReciever = Executors.newSingleThreadExecutor();
-        socketDataReciever.execute(new Runnable() {
+        Enumeration<NetworkInterface> nets = NetworkInterface.getNetworkInterfaces();
+
+        socketDataReceiver = Executors.newSingleThreadExecutor();
+        socketDataReceiver.execute(new Runnable() {
 
             @Override
             public void run() {
@@ -67,30 +66,28 @@ public class MulticastSocket {
                             socket.receive(recvPacket);
                             
                             //check your own message
-                            boolean skip = false;
-                            Enumeration<NetworkInterface> nets = NetworkInterface.getNetworkInterfaces();
+                            boolean sniff = false;
                             for (NetworkInterface netint : Collections.list(nets)) {
                                 Enumeration<InetAddress> inetAddresses = netint.getInetAddresses();
                                 for (InetAddress inetAddress : Collections.list(inetAddresses)) {
                                     if (inetAddress.equals(recvPacket.getAddress())) {
-                                        skip = true;
+                                        sniff = true;
                                         break;
                                     }
                                 }
                             }
-                            
-                            if (skip) {
-                                continue;
-                            }
-                            
+
                             byte[] data = Arrays.copyOfRange(recvPacket.getData(), recvPacket.getOffset(), recvPacket.getLength() - recvPacket.getOffset());
 
                             for (MulticastSocketDataListener listener : dataListeners) {
-                                listener.dataRecieved(recvPacket.getAddress(), recvPacket.getPort(), data);
+                                listener.dataSniffReceived(recvPacket.getAddress(), recvPacket.getPort(), data);
+                                if (!sniff){
+                                    listener.dataReceived(recvPacket.getAddress(), recvPacket.getPort(), data);
+                                }
                             }
                         }
                     } catch (Exception ex) {
-                        //close (interrupt recieve waiting), or some error
+                        //close (interrupt receive waiting), or some error
                     }
                 }
             }
@@ -102,7 +99,7 @@ public class MulticastSocket {
      * 
      * @param port номер UDP порта сервера
      * @param data передаваемые данные
-     * @return Возвращает признак успешной отправки данных
+     * @return признак успешной отправки данных
      */
     public synchronized boolean send(int port, byte[] data) {
         try {
@@ -125,7 +122,7 @@ public class MulticastSocket {
      *       0 - только отправка сообщения
      *      -1 - для ожидания всех сообщений в течение responseTimeout
      * @param responseTimeout время ожидания всех ответов в миллисекундах
-     * @return Возвращает список всех полученных за время responseTimeout ответов
+     * @return список всех полученных за время responseTimeout ответов
      */
     public List<byte[]> sendAndWaitResponses(final int port, final byte[] data, 
             final MulticastSocketResponseFilter responseFilter, final int responseCount, final int responseTimeout) {
@@ -135,7 +132,7 @@ public class MulticastSocket {
             exService = Executors.newSingleThreadExecutor();
             FutureTask<List<byte[]>> futureTask = new FutureTask(new Callable() {
 
-                private final List<byte[]> rdata = new ArrayList();
+                private final List<byte[]> rdata = new ArrayList<>();
 
                 @Override
                 public List<byte[]> call() {
@@ -144,7 +141,7 @@ public class MulticastSocket {
                     addDatagramDataListener(listener = new MulticastSocketDataListener() {
 
                         @Override
-                        public void dataRecieved(InetAddress ip, int port_, byte[] data_) {
+                        public void dataReceived(InetAddress ip, int port_, byte[] data_) {
                             if (port == port_ && responseFilter.filter(data_)) {
                                 synchronized (rdata) {
                                     rdata.add(data_);
@@ -154,6 +151,10 @@ public class MulticastSocket {
                                     }
                                 }
                             }
+                        }
+
+                        @Override
+                        public void dataSniffReceived(InetAddress ip, int port, byte[] data) {
                         }
                     });
 
@@ -195,7 +196,7 @@ public class MulticastSocket {
      * @param data передаваемые данные
      * @param responseFilter фильтр входящих сообщений
      * @param responseTimeout время ожидания всех ответов в миллисекундах
-     * @return Возвращает ответ сервера или null если ответ не был получен
+     * @return ответ сервера или null если ответ не был получен
      */
     public byte[] sendAndWaitResponse(int port, byte[] data, MulticastSocketResponseFilter responseFilter, int responseTimeout) {
         List<byte[]> responses = sendAndWaitResponses(port, data, responseFilter, 1, responseTimeout);
@@ -216,7 +217,7 @@ public class MulticastSocket {
         } catch (IOException e) {
         } finally {
             socket.close();
-            socketDataReciever.shutdown();
+            socketDataReceiver.shutdown();
         }
     }
 
